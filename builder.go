@@ -2,10 +2,10 @@ package consul
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/consul/api"
-	"github.com/pkg/errors"
 	"google.golang.org/grpc/resolver"
 )
 
@@ -20,17 +20,17 @@ func (b *builder) Build(url resolver.Target, cc resolver.ClientConn, opts resolv
 	dsn := strings.Join([]string{schemeName + ":/", url.Authority, url.Endpoint}, "/")
 	tgt, err := parseURL(dsn)
 	if err != nil {
-		return nil, errors.Wrap(err, "Wrong consul URL")
+		return nil, fmt.Errorf("failed to parse consul URL: %w", err)
 	}
 
 	cli, err := api.NewClient(tgt.consulConfig())
 	if err != nil {
-		return nil, errors.Wrap(err, "Couldn't connect to the Consul API")
+		return nil, fmt.Errorf("failed to connect to the Consul API: %w", err)
 	}
 
 	agentNodeName, err := cli.Agent().NodeName()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get agent node id")
+		return nil, fmt.Errorf("failed to get agent node name: %w", err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
