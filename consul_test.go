@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/consul/api"
 	"github.com/mbobakov/grpc-consul-resolver/internal/mocks"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/attributes"
 	"google.golang.org/grpc/resolver"
 )
 
@@ -41,8 +40,7 @@ func TestPopulateEndpoints(t *testing.T) {
 			},
 			want: []resolver.Address{
 				{
-					Addr:       "127.0.0.1:50051",
-					Attributes: attributes.New(createIndexKey, uint64(100), modifyIndexKey, uint64(100)),
+					Addr: "127.0.0.1:50051",
 				},
 			},
 		},
@@ -75,12 +73,10 @@ func TestPopulateEndpoints(t *testing.T) {
 			},
 			want: []resolver.Address{
 				{
-					Addr:       "227.0.0.1:50051",
-					Attributes: attributes.New(createIndexKey, uint64(101), modifyIndexKey, uint64(101)),
+					Addr: "227.0.0.1:50051",
 				},
 				{
-					Addr:       "127.0.0.1:50051",
-					Attributes: attributes.New(createIndexKey, uint64(100), modifyIndexKey, uint64(100)),
+					Addr: "127.0.0.1:50051",
 				},
 			},
 		},
