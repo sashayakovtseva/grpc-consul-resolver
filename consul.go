@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/resolver"
 )
 
-// init function needs for  auto-register in resolvers registry
+// init function for resolver registration.
 func init() {
 	resolver.Register(&builder{})
 }

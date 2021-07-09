@@ -3,21 +3,25 @@ package consul
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/consul/api"
 	"google.golang.org/grpc/resolver"
 )
 
-// schemeName for the urls
+// schemeName for the urls.
 // All target URLs like 'consul://.../...' will be resolved by this resolver
 const schemeName = "consul"
 
-// builder implements resolver.Builder and use for constructing all consul resolvers
+// builder implements resolver.Builder and is used for constructing all consul resolvers.
 type builder struct{}
 
-func (b *builder) Build(url resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
-	dsn := strings.Join([]string{schemeName + ":/", url.Authority, url.Endpoint}, "/")
+func (b *builder) Build(
+	target resolver.Target,
+	cc resolver.ClientConn,
+	_ resolver.BuildOptions,
+) (resolver.Resolver, error) {
+	dsn := target.Scheme + "://" + target.Authority + "/" + target.Endpoint
+
 	tgt, err := parseURL(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse consul URL: %w", err)

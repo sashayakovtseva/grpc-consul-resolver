@@ -12,22 +12,26 @@ import (
 )
 
 type target struct {
-	Addr              string        `form:"-"`
-	User              string        `form:"-"`
-	Password          string        `form:"-"`
-	Service           string        `form:"-"`
-	Wait              time.Duration `form:"wait"`
-	Timeout           time.Duration `form:"timeout"`
-	MaxBackoff        time.Duration `form:"max-backoff"`
-	Tag               string        `form:"tag"`
-	Near              string        `form:"near"`
-	Limit             int           `form:"limit"`
+	// consul client params
+	Addr        string        `form:"-"`
+	User        string        `form:"-"`
+	Password    string        `form:"-"`
+	Token       string        `form:"token"`
+	Wait        time.Duration `form:"wait"`
+	Timeout     time.Duration `form:"timeout"`
+	TLSInsecure bool          `form:"insecure"`
+
+	// service query params
 	Healthy           bool          `form:"healthy"`
-	TLSInsecure       bool          `form:"insecure"`
-	Token             string        `form:"token"`
-	Dc                string        `form:"dc"`
 	AllowStale        bool          `form:"allow-stale"`
 	RequireConsistent bool          `form:"require-consistent"`
+	Dc                string        `form:"dc"`
+	Service           string        `form:"-"`
+	Tag               string        `form:"tag"`
+	Near              string        `form:"near"`
+	MaxBackoff        time.Duration `form:"max-backoff"`
+	Limit             int           `form:"limit"`
+
 	// TODO(mbobakov): custom parameters for the http-transport
 	// TODO(mbobakov): custom parameters for the TLS subsystem
 }
@@ -36,9 +40,17 @@ func (t *target) String() string {
 	return fmt.Sprintf("service='%s' healthy='%t' tag='%s'", t.Service, t.Healthy, t.Tag)
 }
 
-//  parseURL with parameters
-// see README.md for the actual format
-// URL schema will stay stable in the future for backward compatibility
+var decoder = form.NewDecoder()
+
+func init() {
+	decoder.RegisterCustomTypeFunc(func(vals []string) (interface{}, error) {
+		return time.ParseDuration(vals[0])
+	}, time.Duration(0))
+}
+
+// parseURL with parameters.
+// see README.md for the actual format.
+// URL schema will stay stable in the future for backward compatibility.
 func parseURL(u string) (target, error) {
 	rawURL, err := url.Parse(u)
 	if err != nil {
@@ -51,26 +63,25 @@ func parseURL(u string) (target, error) {
 			fmt.Errorf("malformed URL('%s'). Must be in the next format: 'consul://[user:passwd]@host/service?param=value'", u)
 	}
 
-	var tgt target
-	tgt.User = rawURL.User.Username()
+	tgt := target{
+		User:    rawURL.User.Username(),
+		Addr:    rawURL.Host,
+		Service: strings.TrimLeft(rawURL.Path, "/"),
+	}
 	tgt.Password, _ = rawURL.User.Password()
-	tgt.Addr = rawURL.Host
-	tgt.Service = strings.TrimLeft(rawURL.Path, "/")
-	decoder := form.NewDecoder()
-	decoder.RegisterCustomTypeFunc(func(vals []string) (interface{}, error) {
-		return time.ParseDuration(vals[0])
-	}, time.Duration(0))
 
-	err = decoder.Decode(&tgt, rawURL.Query())
-	if err != nil {
+	if err := decoder.Decode(&tgt, rawURL.Query()); err != nil {
 		return target{}, fmt.Errorf("malformed URL parameters: %w", err)
 	}
+
 	if len(tgt.Near) == 0 {
 		tgt.Near = "_agent"
 	}
+
 	if tgt.MaxBackoff == 0 {
 		tgt.MaxBackoff = time.Second
 	}
+
 	return tgt, nil
 }
 
@@ -83,15 +94,14 @@ func (t *target) consulConfig() *api.Config {
 		creds.Password = t.Password
 		creds.Username = t.User
 	}
-	// custom http.Client
-	c := &http.Client{
-		Timeout: t.Timeout,
-	}
+
 	return &api.Config{
-		Address:    t.Addr,
-		HttpAuth:   creds,
-		WaitTime:   t.Wait,
-		HttpClient: c,
+		Address:  t.Addr,
+		HttpAuth: creds,
+		WaitTime: t.Wait,
+		HttpClient: &http.Client{
+			Timeout: t.Timeout,
+		},
 		TLSConfig: api.TLSConfig{
 			InsecureSkipVerify: t.TLSInsecure,
 		},
