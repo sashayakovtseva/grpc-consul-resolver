@@ -87,10 +87,6 @@ func watchConsulService(ctx context.Context, s servicer, tgt target, out chan<- 
 			tgt.String(),
 		)
 
-		if tgt.Limit != 0 && len(ss) > tgt.Limit {
-			ss = ss[:tgt.Limit]
-		}
-
 		select {
 		case out <- ss:
 			continue
@@ -104,16 +100,27 @@ func populateEndpoints(
 	ctx context.Context,
 	clientConn resolver.ClientConn,
 	input <-chan []*api.ServiceEntry,
+	limit int,
 	agentNodeName string,
+	sortOrder string,
 ) {
 	for {
 		select {
 		case in := <-input:
-			// sort services to not replace the same address list in the balancer.
-			sort.Sort(sameNodeFirst{
-				agentNodeName: agentNodeName,
-				in:            in,
-			})
+			if sortOrder == sortSameNodeFirst {
+				sort.Sort(sameNodeFirst{
+					agentNodeName: agentNodeName,
+					in:            in,
+				})
+			}
+
+			if sortOrder == "" || sortOrder == sortByName {
+				sort.Sort(byName(in))
+			}
+
+			if limit != 0 && len(in) > limit {
+				in = in[:limit]
+			}
 
 			addrs := make([]resolver.Address, 0, len(in))
 			for _, s := range in {
@@ -128,30 +135,4 @@ func populateEndpoints(
 			return
 		}
 	}
-}
-
-// sameNodeFirst sorts services so that services on the same
-// node go first, then go others in lexicographic order.
-type sameNodeFirst struct {
-	agentNodeName string
-	in            []*api.ServiceEntry
-}
-
-func (n sameNodeFirst) Len() int      { return len(n.in) }
-func (n sameNodeFirst) Swap(i, j int) { n.in[i], n.in[j] = n.in[j], n.in[i] }
-
-func (n sameNodeFirst) Less(i, j int) bool {
-	if n.in[i].Node.Node == n.agentNodeName && n.in[j].Node.Node == n.agentNodeName {
-		return n.in[i].Service.Address < n.in[j].Service.Address
-	}
-
-	if n.in[i].Node.Node == n.agentNodeName {
-		return true
-	}
-
-	if n.in[j].Node.Node == n.agentNodeName {
-		return false
-	}
-
-	return n.in[i].Service.Address < n.in[j].Service.Address
 }

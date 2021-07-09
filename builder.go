@@ -41,7 +41,7 @@ func (b *builder) Build(
 	pipe := make(chan []*api.ServiceEntry, 1)
 
 	go watchConsulService(ctx, cli.Health(), tgt, pipe)
-	go populateEndpoints(ctx, cc, pipe, agentNodeName)
+	go populateEndpoints(ctx, cc, pipe, tgt.Limit, agentNodeName, tgt.Sort)
 
 	return &resolvr{cancelFunc: cancel}, nil
 }

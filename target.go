@@ -32,6 +32,8 @@ type target struct {
 	MaxBackoff        time.Duration `form:"max-backoff"`
 	Limit             int           `form:"limit"`
 
+	Sort string `form:"sort"`
+
 	// TODO(mbobakov): custom parameters for the http-transport
 	// TODO(mbobakov): custom parameters for the TLS subsystem
 }

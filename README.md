@@ -29,6 +29,7 @@ For full example see [this section](#example)
 | dc                 | string                   | Consul datacenter to choose. Optional                                                                                         |
 | allow-stale        | true/false               | Allow stale results from the agent. https://www.consul.io/api/features/consistency.html#stale                                 |
 | require-consistent | true/false               | RequireConsistent forces the read to be fully consistent. This is more expensive but prevents ever performing a stale read.   |
+| sort               | string                   | Specify endpoints sorting order before sending update to the gRPC. Oneof: ['none', 'byName', 'sameNodeFirst']. Default: 'byName' |
 
 ## Example
 ```go
