@@ -22,15 +22,22 @@ func (b *builder) Build(url resolver.Target, cc resolver.ClientConn, opts resolv
 	if err != nil {
 		return nil, errors.Wrap(err, "Wrong consul URL")
 	}
+
 	cli, err := api.NewClient(tgt.consulConfig())
 	if err != nil {
 		return nil, errors.Wrap(err, "Couldn't connect to the Consul API")
 	}
 
+	agentNodeName, err := cli.Agent().NodeName()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get agent node id")
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
-	pipe := make(chan []string)
+	pipe := make(chan []*api.ServiceEntry, 1)
+
 	go watchConsulService(ctx, cli.Health(), tgt, pipe)
-	go populateEndpoints(ctx, cc, pipe)
+	go populateEndpoints(ctx, cc, pipe, agentNodeName)
 
 	return &resolvr{cancelFunc: cancel}, nil
 }
