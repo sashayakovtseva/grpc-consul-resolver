@@ -69,7 +69,6 @@ func watchConsulService(ctx context.Context, s servicer, tgt target, out chan<- 
 		bck.Reset()
 
 		if meta.LastIndex == lastIndex {
-			grpclog.Info("[Consul resolver] no change")
 			continue
 		}
 
