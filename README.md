@@ -17,7 +17,7 @@ For full example see [this section](#example)
 
 | Name               | Format                   | Description                                                                                                                   |
 |--------------------|--------------------------|-------------------------------------------------------------------------------------------------------------------------------|
-| tag                | string                   | Select endpoints only with this tag                                                                                           |
+| tag                | string                   | Select endpoints only with this tag. Multiple tags may be specified, comma-separated.                                                                                         |
 | healthy            | true/false               | Return only endpoints which pass all health-checks. Default: false                                                            |
 | wait               | as in time.ParseDuration | Wait time for watch changes. Due this time period endpoints will be force refreshed. Default: inherits agent property         |
 | insecure           | true/false               | Allow insecure communication with Consul. Default: true                                                                       |

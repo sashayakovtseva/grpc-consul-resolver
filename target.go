@@ -27,10 +27,12 @@ type target struct {
 	RequireConsistent bool          `form:"require-consistent"`
 	Dc                string        `form:"dc"`
 	Service           string        `form:"-"`
-	Tag               string        `form:"tag"`
 	Near              string        `form:"near"`
 	MaxBackoff        time.Duration `form:"max-backoff"`
 	Limit             int           `form:"limit"`
+
+	Tag  string   `form:"tag"`
+	tags []string `form:"-"`
 
 	Sort string `form:"sort"`
 
@@ -84,6 +86,9 @@ func parseURL(u string) (target, error) {
 		tgt.MaxBackoff = time.Second
 	}
 
+	if tgt.Tag != "" {
+		tgt.tags = strings.Split(tgt.Tag, ",")
+	}
 	return tgt, nil
 }
 

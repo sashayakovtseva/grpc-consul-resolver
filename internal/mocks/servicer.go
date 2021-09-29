@@ -5,44 +5,47 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	api "github.com/hashicorp/consul/api"
-	reflect "reflect"
 )
 
-// Mockservicer is a mock of servicer interface
+// Mockservicer is a mock of servicer interface.
 type Mockservicer struct {
 	ctrl     *gomock.Controller
 	recorder *MockservicerMockRecorder
 }
 
-// MockservicerMockRecorder is the mock recorder for Mockservicer
+// MockservicerMockRecorder is the mock recorder for Mockservicer.
 type MockservicerMockRecorder struct {
 	mock *Mockservicer
 }
 
-// NewMockservicer creates a new mock instance
+// NewMockservicer creates a new mock instance.
 func NewMockservicer(ctrl *gomock.Controller) *Mockservicer {
 	mock := &Mockservicer{ctrl: ctrl}
 	mock.recorder = &MockservicerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *Mockservicer) EXPECT() *MockservicerMockRecorder {
 	return m.recorder
 }
 
-// Service mocks base method
-func (m *Mockservicer) Service(arg0, arg1 string, arg2 bool, arg3 *api.QueryOptions) ([]*api.ServiceEntry, *api.QueryMeta, error) {
-	ret := m.ctrl.Call(m, "Service", arg0, arg1, arg2, arg3)
+// ServiceMultipleTags mocks base method.
+func (m *Mockservicer) ServiceMultipleTags(service string, tags []string, passingOnly bool, q *api.QueryOptions) ([]*api.ServiceEntry, *api.QueryMeta, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServiceMultipleTags", service, tags, passingOnly, q)
 	ret0, _ := ret[0].([]*api.ServiceEntry)
 	ret1, _ := ret[1].(*api.QueryMeta)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
 }
 
-// Service indicates an expected call of Service
-func (mr *MockservicerMockRecorder) Service(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*Mockservicer)(nil).Service), arg0, arg1, arg2, arg3)
+// ServiceMultipleTags indicates an expected call of ServiceMultipleTags.
+func (mr *MockservicerMockRecorder) ServiceMultipleTags(service, tags, passingOnly, q interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceMultipleTags", reflect.TypeOf((*Mockservicer)(nil).ServiceMultipleTags), service, tags, passingOnly, q)
 }

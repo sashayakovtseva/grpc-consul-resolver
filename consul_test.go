@@ -150,33 +150,28 @@ func TestWatchConsulService(t *testing.T) {
 			}()
 
 			fconsul := mocks.NewMockservicer(ctrl)
-			fconsul.EXPECT().Service(tt.tgt.Service, tt.tgt.Tag, tt.tgt.Healthy, &api.QueryOptions{
+			fconsul.EXPECT().ServiceMultipleTags(tt.tgt.Service, tt.tgt.tags, tt.tgt.Healthy, &api.QueryOptions{
 				WaitIndex:         0,
 				Near:              tt.tgt.Near,
 				WaitTime:          tt.tgt.Wait,
 				Datacenter:        tt.tgt.Dc,
 				AllowStale:        tt.tgt.AllowStale,
 				RequireConsistent: tt.tgt.RequireConsistent,
-			}).
-				Times(1).
-				Return(tt.services, &api.QueryMeta{LastIndex: 1}, tt.errorFromService)
-			fconsul.EXPECT().Service(tt.tgt.Service, tt.tgt.Tag, tt.tgt.Healthy, &api.QueryOptions{
+			}).Return(tt.services, &api.QueryMeta{LastIndex: 1}, tt.errorFromService).Times(1)
+
+			fconsul.EXPECT().ServiceMultipleTags(tt.tgt.Service, tt.tgt.tags, tt.tgt.Healthy, &api.QueryOptions{
 				WaitIndex:         1,
 				Near:              tt.tgt.Near,
 				WaitTime:          tt.tgt.Wait,
 				Datacenter:        tt.tgt.Dc,
 				AllowStale:        tt.tgt.AllowStale,
 				RequireConsistent: tt.tgt.RequireConsistent,
-			}).
-				Do(
-					func(svc string, tag string, h bool, opt *api.QueryOptions) ([]*api.ServiceEntry, *api.QueryMeta, error) {
-						if opt.WaitIndex > 0 {
-							select {}
-						}
-						return tt.services, &api.QueryMeta{LastIndex: 1}, tt.errorFromService
-					},
-				).Times(1).
-				Return(tt.services, &api.QueryMeta{LastIndex: 1}, tt.errorFromService)
+			}).DoAndReturn(func(_ string, _ []string, _ bool, opt *api.QueryOptions) ([]*api.ServiceEntry, *api.QueryMeta, error) {
+				if opt.WaitIndex > 0 {
+					select {}
+				}
+				return tt.services, &api.QueryMeta{LastIndex: 1}, tt.errorFromService
+			}).Times(1)
 
 			go watchConsulService(ctx, fconsul, tt.tgt, out)
 			time.Sleep(5 * time.Millisecond)

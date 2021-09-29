@@ -34,7 +34,7 @@ func (r *resolvr) Close() {
 //go:generate mockgen -package mocks -destination internal/mocks/resolverClientConn.go  google.golang.org/grpc/resolver ClientConn
 //go:generate mockgen -package mocks -destination internal/mocks/servicer.go -source consul.go servicer
 type servicer interface {
-	Service(string, string, bool, *api.QueryOptions) ([]*api.ServiceEntry, *api.QueryMeta, error)
+	ServiceMultipleTags(service string, tags []string, passingOnly bool, q *api.QueryOptions) ([]*api.ServiceEntry, *api.QueryMeta, error)
 }
 
 func watchConsulService(ctx context.Context, s servicer, tgt target, out chan<- []*api.ServiceEntry) {
@@ -47,9 +47,9 @@ func watchConsulService(ctx context.Context, s servicer, tgt target, out chan<- 
 
 	var lastIndex uint64
 	for {
-		ss, meta, err := s.Service(
+		ss, meta, err := s.ServiceMultipleTags(
 			tgt.Service,
-			tgt.Tag,
+			tgt.tags,
 			tgt.Healthy,
 			&api.QueryOptions{
 				WaitIndex:         lastIndex,
