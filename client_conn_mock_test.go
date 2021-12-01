@@ -86,9 +86,11 @@ func (mr *MockClientConnMockRecorder) ReportError(arg0 interface{}) *gomock.Call
 }
 
 // UpdateState mocks base method.
-func (m *MockClientConn) UpdateState(arg0 resolver.State) {
+func (m *MockClientConn) UpdateState(arg0 resolver.State) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateState", arg0)
+	ret := m.ctrl.Call(m, "UpdateState", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // UpdateState indicates an expected call of UpdateState.
