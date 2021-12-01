@@ -7,19 +7,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_parseURL(t *testing.T) {
+func Test_newTarget(t *testing.T) {
 	t.Parallel()
 
 	tt := []struct {
 		name      string
 		in        string
-		expect    target
+		expect    *target
 		expectErr bool
 	}{
 		{
 			name: "simple",
 			in:   "consul://127.0.0.127:8555/my-service",
-			expect: target{
+			expect: &target{
 				Addr:       "127.0.0.127:8555",
 				Service:    "my-service",
 				Near:       "_agent",
@@ -29,7 +29,7 @@ func Test_parseURL(t *testing.T) {
 		{
 			name: "all args",
 			in:   "consul://user:password@127.0.0.127:8555/my-service?wait=14s&near=host&insecure=true&limit=1&tag=production&token=test_token&max-backoff=2s&dc=xx&allow-stale=true&require-consistent=true",
-			expect: target{
+			expect: &target{
 				Addr:              "127.0.0.127:8555",
 				User:              "user",
 				Password:          "password",
@@ -50,7 +50,7 @@ func Test_parseURL(t *testing.T) {
 		{
 			name: "multiple tags",
 			in:   "consul://user:password@127.0.0.127:8555/my-service?limit=1&tag=production,green&dc=xx",
-			expect: target{
+			expect: &target{
 				Addr:       "127.0.0.127:8555",
 				User:       "user",
 				Password:   "password",
@@ -86,7 +86,7 @@ func Test_parseURL(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := parseURL(tc.in)
+			got, err := newTarget(tc.in)
 			require.Equal(t, tc.expectErr, err != nil)
 			require.Equal(t, tc.expect, got)
 		})

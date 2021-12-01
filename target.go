@@ -11,6 +11,10 @@ import (
 	"github.com/hashicorp/consul/api"
 )
 
+// schemeName for the urls.
+// All target URLs like 'consul://.../...' will be resolved by this resolver
+const schemeName = "consul"
+
 type target struct {
 	// consul client params
 	Addr        string        `form:"-"`
@@ -52,22 +56,19 @@ func init() {
 	}, time.Duration(0))
 }
 
-// parseURL with parameters.
-// see README.md for the actual format.
-// URL schema will stay stable in the future for backward compatibility.
-func parseURL(u string) (target, error) {
-	rawURL, err := url.Parse(u)
+// newTarget creates target from the passed dsn string, see README.md for details.
+// dsn schema will stay stable in the future for backward compatibility.
+func newTarget(dsn string) (*target, error) {
+	rawURL, err := url.Parse(dsn)
 	if err != nil {
-		return target{}, fmt.Errorf("malformed URL: %w", err)
+		return nil, fmt.Errorf("malformed URL: %w", err)
 	}
 
-	if rawURL.Scheme != schemeName ||
-		len(rawURL.Host) == 0 || len(strings.TrimLeft(rawURL.Path, "/")) == 0 {
-		return target{},
-			fmt.Errorf("malformed URL('%s'). Must be in the next format: 'consul://[user:passwd]@host/service?param=value'", u)
+	if rawURL.Scheme != schemeName || len(rawURL.Host) == 0 || len(strings.TrimLeft(rawURL.Path, "/")) == 0 {
+		return nil, fmt.Errorf("malformed URL('%s'). Must be in the next format: 'consul://[user:passwd]@host/service?param=value'", dsn)
 	}
 
-	tgt := target{
+	tgt := &target{
 		User:    rawURL.User.Username(),
 		Addr:    rawURL.Host,
 		Service: strings.TrimLeft(rawURL.Path, "/"),
@@ -75,7 +76,7 @@ func parseURL(u string) (target, error) {
 	tgt.Password, _ = rawURL.User.Password()
 
 	if err := decoder.Decode(&tgt, rawURL.Query()); err != nil {
-		return target{}, fmt.Errorf("malformed URL parameters: %w", err)
+		return nil, fmt.Errorf("malformed URL parameters: %w", err)
 	}
 
 	if len(tgt.Near) == 0 {
@@ -89,11 +90,12 @@ func parseURL(u string) (target, error) {
 	if tgt.Tag != "" {
 		tgt.tags = strings.Split(tgt.Tag, ",")
 	}
+
 	return tgt, nil
 }
 
-// consulConfig returns config based on the parsed target.
-// It uses custom http-client.
+// consulConfig returns config based on the
+// parsed target. It uses custom http-client.
 func (t *target) consulConfig() *api.Config {
 	var creds *api.HttpBasicAuth
 	if len(t.User) > 0 && len(t.Password) > 0 {
