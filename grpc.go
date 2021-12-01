@@ -69,7 +69,9 @@ func populateEndpoints(ctx context.Context, clientConn resolver.ClientConn, inpu
 				})
 			}
 
-			clientConn.UpdateState(resolver.State{Addresses: addrs})
+			if err := clientConn.UpdateState(resolver.State{Addresses: addrs}); err != nil {
+				grpclog.Errorf("failed to update connection stats: %v", err)
+			}
 		case <-ctx.Done():
 			grpclog.Info("[Consul resolver] Watch has been finished")
 			return
