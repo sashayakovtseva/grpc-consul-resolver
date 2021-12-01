@@ -11,10 +11,10 @@ func Test_newTarget(t *testing.T) {
 	t.Parallel()
 
 	tt := []struct {
-		name      string
-		in        string
-		expect    *target
-		expectErr bool
+		name        string
+		in          string
+		expect      *target
+		expectError bool
 	}{
 		{
 			name: "simple",
@@ -64,21 +64,20 @@ func Test_newTarget(t *testing.T) {
 			},
 		},
 		{
-			name:      "bad scheme",
-			in:        "127.0.0.127:8555/my-service",
-			expectErr: true,
+			name:        "bad scheme",
+			in:          "127.0.0.127:8555/my-service",
+			expectError: true,
 		},
 		{
-			name:      "no service",
-			in:        "consul://127.0.0.127:8555",
-			expectErr: true,
+			name:        "no service",
+			in:          "consul://127.0.0.127:8555",
+			expectError: true,
 		},
 		{
-			name:      "bad arg",
-			in:        "consul://127.0.0.127:8555/s?insecure=BADDD",
-			expectErr: true,
+			name:        "bad arg",
+			in:          "consul://127.0.0.127:8555/s?insecure=BADDD",
+			expectError: true,
 		},
-		// TODO: Add test cases.
 	}
 
 	for i := range tt {
@@ -86,9 +85,9 @@ func Test_newTarget(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := newTarget(tc.in)
-			require.Equal(t, tc.expectErr, err != nil)
-			require.Equal(t, tc.expect, got)
+			actual, err := newTarget(tc.in)
+			require.Equal(t, tc.expectError, err != nil)
+			require.Equal(t, tc.expect, actual)
 		})
 	}
 }
