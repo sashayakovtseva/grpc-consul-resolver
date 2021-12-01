@@ -2,6 +2,7 @@ package consul
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -11,67 +12,192 @@ import (
 )
 
 func TestResolver_WatchConsulService(t *testing.T) {
-	tests := []struct {
-		name             string
-		tgt              *target
-		services         []*api.ServiceEntry
-		errorFromService error
-		want             []*api.ServiceEntry
+	tt := []struct {
+		name   string
+		target *target
+		setup  func(m *MockConsul)
+		expect []*api.ServiceEntry
 	}{
 		{
-			name: "no limit",
-			tgt: &target{
+			name: "ok no limit",
+			target: &target{
 				Service: "svc",
 				Wait:    time.Second,
+				Healthy: true,
+				Near:    "_agent",
 			},
-			services: []*api.ServiceEntry{
-				{
-					Service: &api.AgentService{Address: "127.0.0.1", Port: 1024},
-				},
+			setup: func(m *MockConsul) {
+				m.EXPECT().ServiceMultipleTags("svc", nil, true, &api.QueryOptions{
+					Near:     "_agent",
+					WaitTime: time.Second,
+				}).Return([]*api.ServiceEntry{
+					{
+						Service: &api.AgentService{Address: "127.0.0.1", Port: 1024},
+					},
+				}, &api.QueryMeta{LastIndex: 1}, nil)
+
+				m.EXPECT().ServiceMultipleTags("svc", nil, true, &api.QueryOptions{
+					WaitIndex: 1,
+					Near:      "_agent",
+					WaitTime:  time.Second,
+				}).DoAndReturn(func(
+					_ string,
+					_ []string,
+					_ bool,
+					opt *api.QueryOptions,
+				) ([]*api.ServiceEntry, *api.QueryMeta, error) {
+					select {}
+				})
 			},
-			want: []*api.ServiceEntry{
+			expect: []*api.ServiceEntry{
 				{
 					Service: &api.AgentService{Address: "127.0.0.1", Port: 1024},
 				},
 			},
 		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-			t.Cleanup(cancel)
+		{
+			name: "ok limit sort same node first",
+			target: &target{
+				Service: "svc",
+				Wait:    time.Second,
+				Near:    "_agent",
+				tags:    []string{"green", "master"},
+				Limit:   1,
+				Sort:    sortSameNodeFirst,
+			},
+			setup: func(m *MockConsul) {
+				m.EXPECT().ServiceMultipleTags("svc", []string{"green", "master"}, false, &api.QueryOptions{
+					WaitTime: time.Second,
+					Near:     "_agent",
+				}).Return([]*api.ServiceEntry{
+					{Node: &api.Node{Node: "myNode2"}, Service: &api.AgentService{Address: "127.0.0.1", Port: 1024}},
+					{Node: &api.Node{Node: "myNode"}, Service: &api.AgentService{Address: "127.0.0.1", Port: 8080}},
+					{Node: &api.Node{Node: "myNode2"}, Service: &api.AgentService{Address: "127.0.0.1", Port: 1025}},
+					{Node: &api.Node{Node: "myNode"}, Service: &api.AgentService{Address: "127.0.0.1", Port: 8081}},
+					{Node: &api.Node{Node: "myNode2"}, Service: &api.AgentService{Address: "127.0.0.1", Port: 1026}},
+				}, &api.QueryMeta{LastIndex: 1}, nil)
 
+				m.EXPECT().ServiceMultipleTags("svc", []string{"green", "master"}, false, &api.QueryOptions{
+					WaitIndex: 1,
+					Near:      "_agent",
+					WaitTime:  time.Second,
+				}).DoAndReturn(func(
+					_ string,
+					_ []string,
+					_ bool,
+					opt *api.QueryOptions,
+				) ([]*api.ServiceEntry, *api.QueryMeta, error) {
+					select {}
+				})
+			},
+			expect: []*api.ServiceEntry{
+				{Node: &api.Node{Node: "myNode"}, Service: &api.AgentService{Address: "127.0.0.1", Port: 8080}},
+			},
+		},
+		{
+			name: "consul error",
+			target: &target{
+				Service: "svc",
+				Wait:    time.Second,
+				Near:    "_agent",
+				tags:    []string{"green", "master"},
+				Limit:   1,
+				Sort:    sortByName,
+			},
+			setup: func(m *MockConsul) {
+				m.EXPECT().ServiceMultipleTags("svc", []string{"green", "master"}, false, &api.QueryOptions{
+					WaitTime: time.Second,
+					Near:     "_agent",
+				}).Return(nil, nil, fmt.Errorf("some error"))
+
+				m.EXPECT().ServiceMultipleTags("svc", []string{"green", "master"}, false, &api.QueryOptions{
+					WaitTime: time.Second,
+					Near:     "_agent",
+				}).Return([]*api.ServiceEntry{
+					{Node: &api.Node{Node: "myNode2"}, Service: &api.AgentService{Address: "127.0.0.1", Port: 1024}},
+					{Node: &api.Node{Node: "myNode"}, Service: &api.AgentService{Address: "127.0.0.1", Port: 8080}},
+					{Node: &api.Node{Node: "myNode2"}, Service: &api.AgentService{Address: "127.0.0.1", Port: 1025}},
+					{Node: &api.Node{Node: "myNode"}, Service: &api.AgentService{Address: "127.0.0.1", Port: 8081}},
+					{Node: &api.Node{Node: "myNode2"}, Service: &api.AgentService{Address: "127.0.0.1", Port: 1026}},
+				}, &api.QueryMeta{LastIndex: 1}, nil)
+
+				m.EXPECT().ServiceMultipleTags("svc", []string{"green", "master"}, false, &api.QueryOptions{
+					WaitIndex: 1,
+					Near:      "_agent",
+					WaitTime:  time.Second,
+				}).DoAndReturn(func(
+					_ string,
+					_ []string,
+					_ bool,
+					opt *api.QueryOptions,
+				) ([]*api.ServiceEntry, *api.QueryMeta, error) {
+					select {}
+				})
+			},
+			expect: []*api.ServiceEntry{
+				{Node: &api.Node{Node: "myNode2"}, Service: &api.AgentService{Address: "127.0.0.1", Port: 1024}},
+			},
+		},
+		{
+			name: "no change",
+			target: &target{
+				Service: "svc",
+				Wait:    time.Second,
+				Near:    "_agent",
+				tags:    []string{"green", "master"},
+				Limit:   1,
+				Sort:    sortByName,
+			},
+			setup: func(m *MockConsul) {
+				m.EXPECT().ServiceMultipleTags("svc", []string{"green", "master"}, false, &api.QueryOptions{
+					WaitTime: time.Second,
+					Near:     "_agent",
+				}).Return(nil, &api.QueryMeta{}, nil)
+
+				m.EXPECT().ServiceMultipleTags("svc", []string{"green", "master"}, false, &api.QueryOptions{
+					WaitTime: time.Second,
+					Near:     "_agent",
+				}).Return([]*api.ServiceEntry{
+					{Node: &api.Node{Node: "myNode2"}, Service: &api.AgentService{Address: "127.0.0.1", Port: 1024}},
+				}, &api.QueryMeta{LastIndex: 1}, nil)
+
+				m.EXPECT().ServiceMultipleTags("svc", []string{"green", "master"}, false, &api.QueryOptions{
+					WaitIndex: 1,
+					Near:      "_agent",
+					WaitTime:  time.Second,
+				}).DoAndReturn(func(
+					_ string,
+					_ []string,
+					_ bool,
+					opt *api.QueryOptions,
+				) ([]*api.ServiceEntry, *api.QueryMeta, error) {
+					select {}
+				})
+			},
+			expect: []*api.ServiceEntry{
+				{Node: &api.Node{Node: "myNode2"}, Service: &api.AgentService{Address: "127.0.0.1", Port: 1024}},
+			},
+		},
+	}
+	for i := range tt {
+		tc := tt[i]
+		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 
-			fconsul := NewMockConsul(ctrl)
-			fconsul.EXPECT().ServiceMultipleTags(tt.tgt.Service, tt.tgt.tags, tt.tgt.Healthy, &api.QueryOptions{
-				WaitIndex:         0,
-				Near:              tt.tgt.Near,
-				WaitTime:          tt.tgt.Wait,
-				Datacenter:        tt.tgt.Dc,
-				AllowStale:        tt.tgt.AllowStale,
-				RequireConsistent: tt.tgt.RequireConsistent,
-			}).Return(tt.services, &api.QueryMeta{LastIndex: 1}, tt.errorFromService).Times(1)
-
-			fconsul.EXPECT().ServiceMultipleTags(tt.tgt.Service, tt.tgt.tags, tt.tgt.Healthy, &api.QueryOptions{
-				WaitIndex:         1,
-				Near:              tt.tgt.Near,
-				WaitTime:          tt.tgt.Wait,
-				Datacenter:        tt.tgt.Dc,
-				AllowStale:        tt.tgt.AllowStale,
-				RequireConsistent: tt.tgt.RequireConsistent,
-			}).DoAndReturn(func(_ string, _ []string, _ bool, opt *api.QueryOptions) ([]*api.ServiceEntry, *api.QueryMeta, error) {
-				if opt.WaitIndex > 0 {
-					select {}
-				}
-				return tt.services, &api.QueryMeta{LastIndex: 1}, tt.errorFromService
-			}).Times(1)
+			mockConsul := NewMockConsul(ctrl)
+			if tc.setup != nil {
+				tc.setup(mockConsul)
+			}
 
 			s := &Resolver{
-				logger: noopLogger{},
-				t:      tt.tgt,
-				c:      fconsul,
+				logger:        noopLogger{},
+				t:             tc.target,
+				c:             mockConsul,
+				agentNodeName: "myNode",
 			}
+
+			ctx, cancel := context.WithCancel(context.Background())
+			t.Cleanup(cancel)
 
 			out := s.WatchServiceChanges(ctx)
 			time.Sleep(5 * time.Millisecond)
@@ -80,7 +206,7 @@ func TestResolver_WatchConsulService(t *testing.T) {
 			case <-ctx.Done():
 				return
 			case got := <-out:
-				require.Equal(t, tt.want, got)
+				require.Equal(t, tc.expect, got)
 			}
 		})
 	}

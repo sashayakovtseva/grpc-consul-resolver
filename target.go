@@ -79,7 +79,7 @@ func newTarget(dsn string) (*target, error) {
 		return nil, fmt.Errorf("malformed URL parameters: %w", err)
 	}
 
-	if len(tgt.Near) == 0 {
+	if tgt.Near == "" {
 		tgt.Near = "_agent"
 	}
 
