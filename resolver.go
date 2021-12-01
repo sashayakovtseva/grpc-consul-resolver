@@ -6,8 +6,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/hashicorp/consul/api"
-	"github.com/jpillora/backoff"
 )
 
 // Resolver is used to fetch service addressed from consul and watch for any changes.
@@ -70,11 +70,14 @@ func (r *Resolver) WatchServiceChanges(ctx context.Context) <-chan []*api.Servic
 	go func() {
 		defer close(out)
 
-		bck := &backoff.Backoff{
-			Factor: 2,
-			Jitter: true,
-			Min:    10 * time.Millisecond,
-			Max:    r.t.MaxBackoff,
+		bck := &backoff.ExponentialBackOff{
+			InitialInterval:     10 * time.Millisecond,
+			RandomizationFactor: backoff.DefaultRandomizationFactor,
+			Multiplier:          2,
+			MaxInterval:         r.t.MaxBackoff,
+			MaxElapsedTime:      backoff.DefaultMaxElapsedTime,
+			Stop:                backoff.Stop,
+			Clock:               backoff.SystemClock,
 		}
 
 		var lastIndex uint64
@@ -94,7 +97,7 @@ func (r *Resolver) WatchServiceChanges(ctx context.Context) <-chan []*api.Servic
 			)
 			if err != nil {
 				r.logger.Errorf("[Consul resolver] Couldn't fetch endpoints. target={%s}; error={%v}", r.t.String(), err)
-				time.Sleep(bck.Duration())
+				time.Sleep(bck.NextBackOff())
 				continue
 			}
 

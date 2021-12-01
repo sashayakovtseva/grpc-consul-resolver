@@ -3,10 +3,10 @@ module github.com/mbobakov/grpc-consul-resolver
 go 1.17
 
 require (
+	github.com/cenkalti/backoff/v4 v4.1.1
 	github.com/go-playground/form v3.1.4+incompatible
 	github.com/golang/mock v1.6.0
 	github.com/hashicorp/consul/api v1.11.0
-	github.com/jpillora/backoff v1.0.0
 	github.com/stretchr/testify v1.7.0
 	google.golang.org/grpc v1.41.0
 )
