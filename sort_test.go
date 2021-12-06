@@ -253,3 +253,214 @@ func TestSortSameNodeFirst(t *testing.T) {
 		})
 	}
 }
+
+func TestSortByName(t *testing.T) {
+	t.Parallel()
+
+	tt := []struct {
+		name   string
+		in     []*api.ServiceEntry
+		expect []*api.ServiceEntry
+	}{
+		{
+			name: "one service",
+			in: []*api.ServiceEntry{
+				{
+					Node: &api.Node{
+						Node: "node-1",
+					},
+					Service: &api.AgentService{
+						Address: "127.0.0.1",
+						Port:    50051,
+					},
+				},
+			},
+			expect: []*api.ServiceEntry{
+				{
+					Node: &api.Node{
+						Node: "node-1",
+					},
+					Service: &api.AgentService{
+						Address: "127.0.0.1",
+						Port:    50051,
+					},
+				},
+			},
+		},
+		{
+			name: "two services on same node",
+			in: []*api.ServiceEntry{
+				{
+					Node: &api.Node{
+						Node: "node-1",
+					},
+					Service: &api.AgentService{
+						Address: "227.0.0.1",
+						Port:    50051,
+					},
+				},
+				{
+					Node: &api.Node{
+						Node: "node-1",
+					},
+					Service: &api.AgentService{
+						Address: "127.0.0.1",
+						Port:    50051,
+					},
+				},
+			},
+			expect: []*api.ServiceEntry{
+				{
+					Node: &api.Node{
+						Node: "node-1",
+					},
+					Service: &api.AgentService{
+						Address: "127.0.0.1",
+						Port:    50051,
+					},
+				},
+				{
+					Node: &api.Node{
+						Node: "node-1",
+					},
+					Service: &api.AgentService{
+						Address: "227.0.0.1",
+						Port:    50051,
+					},
+				},
+			},
+		},
+		{
+			name: "two services on different nodes",
+			in: []*api.ServiceEntry{
+				{
+					Node: &api.Node{
+						Node: "node-2",
+					},
+					Service: &api.AgentService{
+						Address: "127.0.0.1",
+						Port:    50051,
+					},
+				},
+				{
+					Node: &api.Node{
+						Node: "node-1",
+					},
+					Service: &api.AgentService{
+						Address: "227.0.0.1",
+						Port:    50051,
+					},
+				},
+			},
+			expect: []*api.ServiceEntry{
+				{
+					Node: &api.Node{
+						Node: "node-2",
+					},
+					Service: &api.AgentService{
+						Address: "127.0.0.1",
+						Port:    50051,
+					},
+				},
+				{
+					Node: &api.Node{
+						Node: "node-1",
+					},
+					Service: &api.AgentService{
+						Address: "227.0.0.1",
+						Port:    50051,
+					},
+				},
+			},
+		},
+		{
+			name: "two on same two on different",
+			in: []*api.ServiceEntry{
+				{
+					Node: &api.Node{
+						Node: "node-1",
+					},
+					Service: &api.AgentService{
+						Address: "192.168.235.110",
+						Port:    50051,
+					},
+				},
+				{
+					Node: &api.Node{
+						Node: "node-2",
+					},
+					Service: &api.AgentService{
+						Address: "192.168.235.116",
+						Port:    50051,
+					},
+				},
+				{
+					Node: &api.Node{
+						Node: "node-1",
+					},
+					Service: &api.AgentService{
+						Address: "192.168.235.112",
+						Port:    50051,
+					},
+				},
+				{
+					Node: &api.Node{
+						Node: "node-3",
+					},
+					Service: &api.AgentService{
+						Address: "192.168.235.115",
+						Port:    50051,
+					},
+				},
+			},
+			expect: []*api.ServiceEntry{
+				{
+					Node: &api.Node{
+						Node: "node-1",
+					},
+					Service: &api.AgentService{
+						Address: "192.168.235.110",
+						Port:    50051,
+					},
+				},
+				{
+					Node: &api.Node{
+						Node: "node-1",
+					},
+					Service: &api.AgentService{
+						Address: "192.168.235.112",
+						Port:    50051,
+					},
+				},
+				{
+					Node: &api.Node{
+						Node: "node-3",
+					},
+					Service: &api.AgentService{
+						Address: "192.168.235.115",
+						Port:    50051,
+					},
+				},
+				{
+					Node: &api.Node{
+						Node: "node-2",
+					},
+					Service: &api.AgentService{
+						Address: "192.168.235.116",
+						Port:    50051,
+					},
+				},
+			},
+		},
+	}
+
+	for i := range tt {
+		tc := tt[i]
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			sort.Sort(byName(tc.in))
+			require.Equal(t, tc.expect, tc.in)
+		})
+	}
+}
