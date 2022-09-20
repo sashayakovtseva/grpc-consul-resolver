@@ -1,7 +1,8 @@
-version: "2.3"
+version: '3.8'
+
 services:
   consul:
-    image: consul:1.6.2
+    image: consul:1.13.1
     ports:
       - "127.0.0.1:8500:8500"
     command: agent -ui -client 0.0.0.0 -dev
@@ -16,7 +17,6 @@ services:
 
   whoami:
     image: jwilder/whoami
-    scale: 3
     ports:
       - "8000"
     environment:
