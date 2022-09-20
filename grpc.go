@@ -37,9 +37,7 @@ func (b *builder) Build(
 	cc resolver.ClientConn,
 	_ resolver.BuildOptions,
 ) (resolver.Resolver, error) {
-	dsn := target.URL.Scheme + "://" + target.URL.Host + "/" + target.URL.Path
-
-	r, err := NewResolver(dsn, WithLogger(grpcGlobalLogger{}))
+	r, err := NewResolver(target.URL.String(), WithLogger(grpcGlobalLogger{}))
 	if err != nil {
 		return nil, err
 	}
